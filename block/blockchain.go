@@ -33,6 +33,10 @@ func NewBlock(nounce int, prevHash [32]byte, transactions []*Transaction) *Block
 	return b
 }
 
+func (bc *Blockchain) TransactionPool() []*Transaction {
+	return bc.transactionPool
+}
+
 func (b *Block) Print() {
 
 	fmt.Printf("timestamp is 		%d\n", b.timestamp)
@@ -112,6 +116,18 @@ func (bc *Blockchain) Print() {
 	fmt.Printf("%s\n", strings.Repeat("*", 50))
 }
 
+func (bc *Blockchain) CreateTransaction(sender string, recipient string, value float32,
+    senderPublicKey *ecdsa.PublicKey, s *utils.Signature) bool {
+
+    isTransacted := bc.AddTransaction(sender, recipient, value, senderPublicKey, s)
+
+    // TODO
+    // Sync
+
+    return isTransacted
+}
+
+
 func (bc *Blockchain) AddTransaction(sender, recipient string, value float32, senderPublicKey *ecdsa.PublicKey, s *utils.Signature) bool {
 
 	t := NewTransaction(sender, recipient, value)
@@ -123,10 +139,10 @@ func (bc *Blockchain) AddTransaction(sender, recipient string, value float32, se
 
 	if bc.VerifyTransactionSignature(senderPublicKey, s, t) {
 
-		if bc.CalculateTotalAmount(sender) < value {
-			log.Println("ERROR : not enough balance in wallet")
-			return false
-		}
+		// if bc.CalculateTotalAmount(sender) < value {
+		// 	log.Println("ERROR : not enough balance in wallet")
+		// 	return false
+		// }
 
 		bc.transactionPool = append(bc.transactionPool, t)
 		return true
@@ -222,4 +238,23 @@ func (t *Transaction) MarshalJSON() ([]byte, error) {
 		Recipient: t.recipientBlockchainAddress,
 		Value:     t.value,
 	})
+}
+
+type TransactionRequest struct {
+    SenderBlockchainAddress    *string  `json:"sender_blockchain_address"`
+    RecipientBlockchainAddress *string  `json:"recipient_blockchain_address"`
+    SenderPublicKey            *string  `json:"sender_public_key"`
+    Value                      *float32 `json:"value"`
+    Signature                  *string  `json:"signature"`
+}
+
+func (tr *TransactionRequest) Validate() bool {
+    if tr.SenderBlockchainAddress == nil ||
+        tr.RecipientBlockchainAddress == nil ||
+        tr.SenderPublicKey == nil ||
+        tr.Value == nil ||
+        tr.Signature == nil {
+        return false
+    }
+    return true
 }
